@@ -1,0 +1,10 @@
+import {
+  "moonbit-community/tyroute",
+  "moonbitlang/moonback",
+  "moonbitlang/async",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "native+wasm"
+
+pkgtype(kind: "executable")

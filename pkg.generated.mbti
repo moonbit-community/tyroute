@@ -1,0 +1,152 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/tyroute"
+
+import {
+  "moonbitlang/async/http",
+  "moonbitlang/async/io",
+  "moonbitlang/core/json",
+  "moonbitlang/moonback",
+}
+
+// Values
+
+// Errors
+pub(all) suberror HandlerError {
+  StringMismatch(String)
+  ParamMismatch(String)
+  QueryMismatch(String)
+  HeaderMismatch(String)
+  BodyMismatch(String)
+  ResponseMismatch(String)
+}
+pub fn HandlerError::output(Self, &Logger) -> Unit
+pub fn HandlerError::to_string(Self) -> String
+pub impl Show for HandlerError
+
+pub suberror OpenApiError {
+  InvalidPath(String)
+  InvalidSchema(String)
+  DuplicateOperation(String)
+}
+
+// Types and methods
+pub(all) struct Headers[T](T)
+
+type Request[Param, Queries, Headers, Body]
+
+type Response
+pub fn[A : @moonback.ToHeaders] Response::Response(status~ : Int32, headers~ : A, body? : &@io.Data) -> Self
+pub fn Response::to_response(Self) -> Self raise HandlerError
+pub impl ToResponse for Response
+
+type Router
+pub fn Router::Router() -> Self
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::get(Self, String, (P, Q, H) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::head(Self, String, (P, Q, H) -> R) -> Unit
+pub async fn Router::initialize(Self, @moonback.ModuleContext) -> Unit
+pub fn Router::openapi(Self, title~ : String, version~ : String, components? : @json.Json) -> @json.Json raise OpenApiError
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::options(Self, String, (P, Q, H) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, (P, Q, H, B) -> R) -> Unit
+pub impl @moonback.Extension for Router
+
+pub(all) struct StatusCode(Int32)
+pub impl ToResponse for StatusCode
+
+pub(all) struct ViaJson[T](T)
+pub async fn[T : @json.FromJson] ViaJson::from_body(@moonback.RequestBody) -> Self[T]
+pub impl[T : @json.FromJson] FromBody for ViaJson[T]
+pub impl[T : @json.FromJson] FromHeaders for ViaJson[T]
+pub impl[A : @json.FromJson] FromParam for ViaJson[A]
+pub impl[A : @json.FromJson] FromQueries for ViaJson[A]
+pub impl[A : @json.FromJson] FromString for ViaJson[A]
+pub impl[A : @json.ToJson] ToResponse for ViaJson[A]
+
+// Type aliases
+
+// Traits
+pub(open) trait FromBody {
+  fn schema() -> @json.Json = _
+  async fn from_body(@moonback.RequestBody) -> Self
+}
+pub impl FromBody for Unit
+pub impl FromBody for @json.Json
+
+pub(open) trait FromHeaders {
+  fn schema() -> @json.Json = _
+  fn from_headers(@moonback.Headers) -> Self raise HandlerError
+}
+pub impl FromHeaders for Unit
+pub impl[T : FromString] FromHeaders for Array[(String, T)]
+pub impl[T : FromString] FromHeaders for Map[String, T]
+pub impl FromHeaders for @moonback.Headers
+
+pub(open) trait FromParam {
+  fn schema() -> @json.Json = _
+  fn from_param(Array[(StringView, StringView)]) -> Self raise HandlerError
+}
+pub impl FromParam for Unit
+pub impl FromParam for Bool
+pub impl FromParam for Char
+pub impl FromParam for Int32
+pub impl FromParam for Int64
+pub impl FromParam for UInt32
+pub impl FromParam for UInt64
+pub impl FromParam for Float
+pub impl FromParam for Double
+pub impl FromParam for String
+pub impl[A : FromString, B : FromString] FromParam for (A, B)
+pub impl[A : FromString, B : FromString, C : FromString] FromParam for (A, B, C)
+pub impl[A : FromString, B : FromString, C : FromString, D : FromString] FromParam for (A, B, C, D)
+pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : FromString] FromParam for (A, B, C, D, E)
+pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : FromString, F : FromString] FromParam for (A, B, C, D, E, F)
+pub impl FromParam for StringView
+
+pub(open) trait FromQueries {
+  fn schema() -> @json.Json = _
+  fn from_queries(@moonback.QueryParams) -> Self raise HandlerError
+}
+pub impl FromQueries for Unit
+pub impl[T : FromString] FromQueries for Array[(String, T)]
+pub impl[T : FromString] FromQueries for Map[String, T]
+
+pub(open) trait FromString {
+  fn schema() -> @json.Json = _
+  fn from_string(StringView) -> Self raise HandlerError
+}
+pub impl FromString for Bool
+pub impl FromString for Char
+pub impl FromString for Int32
+pub impl FromString for Int64
+pub impl FromString for UInt32
+pub impl FromString for UInt64
+pub impl FromString for Float
+pub impl FromString for Double
+pub impl FromString for String
+pub impl FromString for StringView
+
+pub(open) trait ToResponse {
+  fn schema() -> @json.Json = _
+  fn to_response(Self) -> Response raise HandlerError
+}
+pub impl ToResponse for Unit
+pub impl ToResponse for Bool
+pub impl ToResponse for Byte
+pub impl ToResponse for Char
+pub impl ToResponse for Int32
+pub impl ToResponse for Int16
+pub impl ToResponse for Int64
+pub impl ToResponse for UInt32
+pub impl ToResponse for UInt16
+pub impl ToResponse for UInt64
+pub impl ToResponse for Float
+pub impl ToResponse for Double
+pub impl ToResponse for String
+pub impl ToResponse for Bytes
+pub impl ToResponse for @json.Json
+pub impl[A : ToResponse] ToResponse for (StatusCode, A)
+pub impl ToResponse for BytesView
+pub impl ToResponse for StringView

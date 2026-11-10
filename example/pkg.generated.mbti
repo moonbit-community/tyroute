@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/tyroute/example"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+#derive(@json.FromJson, @json.ToJson)
+type User
+
+#derive(@json.FromJson)
+type UserQueries
+
+// Type aliases
+
+// Traits
