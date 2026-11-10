@@ -21,7 +21,7 @@ struct ModuleListParams {
 
 ///|
 #derive(FromJson)
-struct ModuleListQueries {
+struct ModuleListQuery {
   page : Int32?
   limit : Int32?
   offset : Int32?
@@ -36,7 +36,7 @@ struct ModuleListHeaders {
 ///|
 fn module_list(
   _params : Unit,
-  queries : @tyroute.ViaJson[ModuleListQueries],
+  query : @tyroute.ViaJson[ModuleListQuery],
   headers : @tyroute.ViaJson[ModuleListHeaders],
 ) -> (StatusCode, ViaJson[Array[Module]]) {
   (StatusCode(200), [])
@@ -45,7 +45,7 @@ fn module_list(
 ///|
 fn module_create(
   params : (String, String),
-  _queries : Unit,
+  _query : Unit,
   _headers : Unit,
   body : @json.Json,
 ) -> ViaJson[Array[Module]] {

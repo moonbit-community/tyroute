@@ -7,17 +7,17 @@ struct User {
 
 ///|
 #derive(FromJson)
-struct UserQueries {
+struct UserQuery {
   name : String?
 }
 
 ///|
 fn get_user(
   id : Int32,
-  queries : @tyroute.ViaJson[UserQueries],
+  query : @tyroute.ViaJson[UserQuery],
   _headers : Unit,
 ) -> @tyroute.ViaJson[User] {
-  let name = queries.0.name.unwrap_or("MoonBit")
+  let name = query.0.name.unwrap_or("MoonBit")
   @tyroute.ViaJson({ id, name, })
 }
 

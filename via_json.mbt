@@ -13,7 +13,7 @@ pub impl[A : FromJson] FromParam for ViaJson[A] with fn from_param(arr) {
 }
 
 ///|
-pub impl[A : FromJson] FromQueries for ViaJson[A] with fn from_queries(query) {
+pub impl[A : FromJson] FromQuery for ViaJson[A] with fn from_query(query) {
   let map = Map([])
   for (name, value) in query.iter() {
     map[name] = @json.Json::string(value)

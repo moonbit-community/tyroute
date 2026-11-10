@@ -32,7 +32,7 @@ pub suberror OpenApiError {
 // Types and methods
 pub(all) struct Headers[T](T)
 
-type Request[Param, Queries, Headers, Body]
+type Request[Param, Query, Headers, Body]
 
 type Response
 pub fn[A : @moonback.ToHeaders] Response::Response(status~ : Int32, headers~ : A, body? : &@io.Data) -> Self
@@ -41,16 +41,16 @@ pub impl ToResponse for Response
 
 type Router
 pub fn Router::Router() -> Self
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::get(Self, String, (P, Q, H) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::head(Self, String, (P, Q, H) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(Self, String, (P, Q, H) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(Self, String, (P, Q, H) -> R) -> Unit
 pub async fn Router::initialize(Self, @moonback.ModuleContext) -> Unit
 pub fn Router::openapi(Self, title~ : String, version~ : String, components? : @json.Json) -> @json.Json raise OpenApiError
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::options(Self, String, (P, Q, H) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(Self, String, (P, Q, H) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, (P, Q, H, B) -> R) -> Unit
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, (P, Q, H, B) -> R) -> Unit
 pub impl @moonback.Extension for Router
 
 pub(all) struct StatusCode(Int32)
@@ -61,7 +61,7 @@ pub async fn[T : @json.FromJson] ViaJson::from_body(@moonback.RequestBody) -> Se
 pub impl[T : @json.FromJson] FromBody for ViaJson[T]
 pub impl[T : @json.FromJson] FromHeaders for ViaJson[T]
 pub impl[A : @json.FromJson] FromParam for ViaJson[A]
-pub impl[A : @json.FromJson] FromQueries for ViaJson[A]
+pub impl[A : @json.FromJson] FromQuery for ViaJson[A]
 pub impl[A : @json.FromJson] FromString for ViaJson[A]
 pub impl[A : @json.ToJson] ToResponse for ViaJson[A]
 
@@ -105,13 +105,13 @@ pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : Fro
 pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : FromString, F : FromString] FromParam for (A, B, C, D, E, F)
 pub impl FromParam for StringView
 
-pub(open) trait FromQueries {
+pub(open) trait FromQuery {
   fn schema() -> @json.Json = _
-  fn from_queries(@moonback.QueryParams) -> Self raise HandlerError
+  fn from_query(@moonback.QueryParams) -> Self raise HandlerError
 }
-pub impl FromQueries for Unit
-pub impl[T : FromString] FromQueries for Array[(String, T)]
-pub impl[T : FromString] FromQueries for Map[String, T]
+pub impl FromQuery for Unit
+pub impl[T : FromString] FromQuery for Array[(String, T)]
+pub impl[T : FromString] FromQuery for Map[String, T]
 
 pub(open) trait FromString {
   fn schema() -> @json.Json = _

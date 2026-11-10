@@ -14,7 +14,7 @@ import {
 type User
 
 #derive(@json.FromJson)
-type UserQueries
+type UserQuery
 
 // Type aliases
 

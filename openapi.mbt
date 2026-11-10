@@ -24,7 +24,7 @@ pub fn Router::openapi(
     for
       schema in [
         route.params_schema,
-        route.queries_schema,
+        route.query_schema,
         route.headers_schema,
         route.body_schema,
         route.response_schema,
@@ -102,14 +102,12 @@ pub fn Router::openapi(
       }
       parameters.push(@json.Json::object(parameter))
     }
-    if !(route.queries_schema is False) {
+    if !(route.query_schema is False) {
       parameters.push({
         "name": "query",
         "in": "querystring",
         "content": {
-          "application/x-www-form-urlencoded": {
-            "schema": route.queries_schema,
-          },
+          "application/x-www-form-urlencoded": { "schema": route.query_schema },
         },
       })
     }

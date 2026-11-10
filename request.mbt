@@ -1,7 +1,7 @@
 ///|
-struct Request[Param, Queries, Headers, Body] {
+struct Request[Param, Query, Headers, Body] {
   params : Param
-  queries : Queries
+  query : Query
   headers : Headers
   body : Body
 }

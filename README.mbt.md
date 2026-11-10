@@ -37,24 +37,24 @@ struct User {
 
 ///|
 #derive(FromJson)
-struct UserQueries {
+struct UserQuery {
   name : String?
 }
 
 ///|
 fn get_user(
   id : Int32,
-  queries : @tyroute.ViaJson[UserQueries],
+  query : @tyroute.ViaJson[UserQuery],
   _headers : Unit,
 ) -> @tyroute.ViaJson[User] {
-  let name = queries.0.name.unwrap_or("MoonBit")
+  let name = query.0.name.unwrap_or("MoonBit")
   @tyroute.ViaJson({ id, name, })
 }
 
 ///|
 fn create_user(
   _params : Unit,
-  _queries : Unit,
+  _query : Unit,
   _headers : Unit,
   body : @tyroute.ViaJson[User],
 ) -> (@tyroute.StatusCode, @tyroute.ViaJson[User]) {
@@ -119,7 +119,7 @@ extracts two captures in path order. Query and header maps use `FromString`
 to parse their values. `ViaJson[T]` decodes JSON bodies through `FromJson` and
 encodes JSON responses through `ToJson`.
 
-Custom types can implement `FromParam`, `FromQueries`, `FromHeaders`,
+Custom types can implement `FromParam`, `FromQuery`, `FromHeaders`,
 `FromBody`, and `ToResponse`. Each trait has a default unconstrained
 `schema()` that custom types can override.
 

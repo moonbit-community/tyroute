@@ -9,7 +9,7 @@ priv struct Route {
   path : String
   handler : @moonback.Handler
   params_schema : @json.Json
-  queries_schema : @json.Json
+  query_schema : @json.Json
   headers_schema : @json.Json
   body_schema : @json.Json
   response_schema : @json.Json
@@ -23,7 +23,7 @@ pub fn Router::Router() -> Router {
 ///|
 pub fn[
   P : FromParam,
-  Q : FromQueries,
+  Q : FromQuery,
   H : FromHeaders,
   B : FromBody,
   R : ToResponse,
@@ -37,7 +37,7 @@ pub fn[
     meth,
     path,
     params_schema: P::schema(),
-    queries_schema: Q::schema(),
+    query_schema: Q::schema(),
     headers_schema: H::schema(),
     body_schema: B::schema(),
     response_schema: R::schema(),
@@ -47,10 +47,10 @@ pub fn[
         // FromParam pops from the end; reverse captures to preserve path order.
         params.rev_in_place()
         let params : P = FromParam::from_param(params)
-        let queries : Q = FromQueries::from_queries(req.query())
+        let query : Q = FromQuery::from_query(req.query())
         let headers : H = FromHeaders::from_headers(req.headers)
         let body : B = FromBody::from_body(req.body)
-        ToResponse::to_response(handler(params, queries, headers, body))
+        ToResponse::to_response(handler(params, query, headers, body))
       } catch {
         ResponseMismatch(_) =>
           Response(status=500, headers=@moonback.Headers::default())
@@ -71,20 +71,20 @@ pub fn[
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::get(
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(
   self : Router,
   path : String,
   handler : (P, Q, H) -> R,
 ) -> Unit {
-  self.add(path, Get, (params, queries, headers, _body : Unit) => {
-    handler(params, queries, headers)
+  self.add(path, Get, (params, query, headers, _body : Unit) => {
+    handler(params, query, headers)
   })
 }
 
 ///|
 pub fn[
   P : FromParam,
-  Q : FromQueries,
+  Q : FromQuery,
   H : FromHeaders,
   B : FromBody,
   R : ToResponse,
@@ -99,7 +99,7 @@ pub fn[
 ///|
 pub fn[
   P : FromParam,
-  Q : FromQueries,
+  Q : FromQuery,
   H : FromHeaders,
   B : FromBody,
   R : ToResponse,
@@ -114,7 +114,7 @@ pub fn[
 ///|
 pub fn[
   P : FromParam,
-  Q : FromQueries,
+  Q : FromQuery,
   H : FromHeaders,
   B : FromBody,
   R : ToResponse,
@@ -129,7 +129,7 @@ pub fn[
 ///|
 pub fn[
   P : FromParam,
-  Q : FromQueries,
+  Q : FromQuery,
   H : FromHeaders,
   B : FromBody,
   R : ToResponse,
@@ -142,24 +142,24 @@ pub fn[
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::head(
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(
   self : Router,
   path : String,
   handler : (P, Q, H) -> R,
 ) -> Unit {
-  self.add(path, Head, (params, queries, headers, _body : Unit) => {
-    handler(params, queries, headers)
+  self.add(path, Head, (params, query, headers, _body : Unit) => {
+    handler(params, query, headers)
   })
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQueries, H : FromHeaders, R : ToResponse] Router::options(
+pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(
   self : Router,
   path : String,
   handler : (P, Q, H) -> R,
 ) -> Unit {
-  self.add(path, Options, (params, queries, headers, _body : Unit) => {
-    handler(params, queries, headers)
+  self.add(path, Options, (params, query, headers, _body : Unit) => {
+    handler(params, query, headers)
   })
 }
 
