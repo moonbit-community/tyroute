@@ -23,6 +23,7 @@ pub fn Router::Router() -> Router {
 
 ///|
 pub fn[
+  C,
   P : FromParam,
   Q : FromQuery,
   H : FromHeaders,
@@ -32,7 +33,8 @@ pub fn[
   self : Router,
   path : String,
   meth : @http.RequestMethod,
-  handler : async (P, Q, H, B) -> R,
+  handler : async (C, P, Q, H, B) -> R,
+  ctx : C,
 ) -> Unit {
   self.routes.push({
     meth,
@@ -51,7 +53,7 @@ pub fn[
         let query : Q = FromQuery::from_query(req.query())
         let headers : H = FromHeaders::from_headers(req.headers)
         let body : B = FromBody::from_body(req.body)
-        ToResponse::to_response(handler(params, query, headers, body))
+        ToResponse::to_response(handler(ctx, params, query, headers, body))
       } catch {
         ResponseMismatch(_) => Response(status=500)
         HandlerError::_ as e =>
@@ -71,18 +73,25 @@ pub fn[
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(
   self : Router,
   path : String,
-  handler : async (P, Q, H) -> R,
+  handler : async (C, P, Q, H) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Get, (params, query, headers, _body : Unit) => {
-    handler(params, query, headers)
-  })
+  self.add(
+    path,
+    Get,
+    (ctx, params, query, headers, _body : Unit) => {
+      handler(ctx, params, query, headers)
+    },
+    ctx,
+  )
 }
 
 ///|
 pub fn[
+  C,
   P : FromParam,
   Q : FromQuery,
   H : FromHeaders,
@@ -91,13 +100,15 @@ pub fn[
 ] Router::post(
   self : Router,
   path : String,
-  handler : async (P, Q, H, B) -> R,
+  handler : async (C, P, Q, H, B) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Post, handler)
+  self.add(path, Post, handler, ctx)
 }
 
 ///|
 pub fn[
+  C,
   P : FromParam,
   Q : FromQuery,
   H : FromHeaders,
@@ -106,13 +117,15 @@ pub fn[
 ] Router::put(
   self : Router,
   path : String,
-  handler : async (P, Q, H, B) -> R,
+  handler : async (C, P, Q, H, B) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Put, handler)
+  self.add(path, Put, handler, ctx)
 }
 
 ///|
 pub fn[
+  C,
   P : FromParam,
   Q : FromQuery,
   H : FromHeaders,
@@ -121,13 +134,15 @@ pub fn[
 ] Router::patch(
   self : Router,
   path : String,
-  handler : async (P, Q, H, B) -> R,
+  handler : async (C, P, Q, H, B) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Patch, handler)
+  self.add(path, Patch, handler, ctx)
 }
 
 ///|
 pub fn[
+  C,
   P : FromParam,
   Q : FromQuery,
   H : FromHeaders,
@@ -136,31 +151,44 @@ pub fn[
 ] Router::delete(
   self : Router,
   path : String,
-  handler : async (P, Q, H, B) -> R,
+  handler : async (C, P, Q, H, B) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Delete, handler)
+  self.add(path, Delete, handler, ctx)
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(
   self : Router,
   path : String,
-  handler : async (P, Q, H) -> R,
+  handler : async (C, P, Q, H) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Head, (params, query, headers, _body : Unit) => {
-    handler(params, query, headers)
-  })
+  self.add(
+    path,
+    Head,
+    (ctx, params, query, headers, _body : Unit) => {
+      handler(ctx, params, query, headers)
+    },
+    ctx,
+  )
 }
 
 ///|
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(
   self : Router,
   path : String,
-  handler : async (P, Q, H) -> R,
+  handler : async (C, P, Q, H) -> R,
+  ctx : C,
 ) -> Unit {
-  self.add(path, Options, (params, query, headers, _body : Unit) => {
-    handler(params, query, headers)
-  })
+  self.add(
+    path,
+    Options,
+    (ctx, params, query, headers, _body : Unit) => {
+      handler(ctx, params, query, headers)
+    },
+    ctx,
+  )
 }
 
 ///|

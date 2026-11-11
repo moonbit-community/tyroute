@@ -51,3 +51,8 @@ jobs:
           trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
           printf '%s\n' "$SECRET" > "$HOME/.moon/credentials.json"
           moon publish
+
+      - name: Check standalone example against published module
+        run: |
+          moon update
+          moon check example/serve.mbtx
