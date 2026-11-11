@@ -15,7 +15,7 @@ struct User {
   name : String
 }
 
-fn get_user(
+async fn get_user(
   param : Int, query : Unit, headers : Unit
 ) -> ViaJson[User] {
   let name = "..."
@@ -28,7 +28,7 @@ struct SearchQuery {
   page : Int
 }
 
-fn search_user(
+async fn search_user(
   param : Unit, query : ViaJson[SearchQuery], _ : Unit,
 ) -> ViaJson[Array[User]] {
   println("\{query.kw}, \{query.page}")

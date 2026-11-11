@@ -42,7 +42,7 @@ struct UserQuery {
 }
 
 ///|
-fn get_user(
+async fn get_user(
   id : Int32,
   query : @tyroute.ViaJson[UserQuery],
   _headers : Unit,
@@ -52,7 +52,7 @@ fn get_user(
 }
 
 ///|
-fn create_user(
+async fn create_user(
   _params : Unit,
   _query : Unit,
   _headers : Unit,

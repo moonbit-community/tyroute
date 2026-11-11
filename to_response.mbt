@@ -20,12 +20,17 @@ pub impl ToResponse for Response with fn to_response(self) {
 pub extend Response with ToResponse::{to_response}
 
 ///|
-pub fn[A : @moonback.ToHeaders] Response::Response(
+pub fn Response::Response(
   status~ : Int32,
-  headers~ : A,
+  headers? : &@moonback.ToHeaders,
   body? : &@io.Data,
 ) -> Self {
-  { status, headers: headers.to_headers(), body, }
+  let headers = if headers is Some(headers) {
+    headers.to_headers()
+  } else {
+    @moonback.Headers::default()
+  }
+  { status, headers, body, }
 }
 
 ///|

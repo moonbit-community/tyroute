@@ -32,7 +32,7 @@ pub fn[
   self : Router,
   path : String,
   meth : @http.RequestMethod,
-  handler : (P, Q, H, B) -> R,
+  handler : async (P, Q, H, B) -> R,
 ) -> Unit {
   self.routes.push({
     meth,
@@ -53,8 +53,7 @@ pub fn[
         let body : B = FromBody::from_body(req.body)
         ToResponse::to_response(handler(params, query, headers, body))
       } catch {
-        ResponseMismatch(_) =>
-          Response(status=500, headers=@moonback.Headers::default())
+        ResponseMismatch(_) => Response(status=500)
         HandlerError::_ as e =>
           Response(
             status=400,
@@ -75,7 +74,7 @@ pub fn[
 pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(
   self : Router,
   path : String,
-  handler : (P, Q, H) -> R,
+  handler : async (P, Q, H) -> R,
 ) -> Unit {
   self.add(path, Get, (params, query, headers, _body : Unit) => {
     handler(params, query, headers)
@@ -92,7 +91,7 @@ pub fn[
 ] Router::post(
   self : Router,
   path : String,
-  handler : (P, Q, H, B) -> R,
+  handler : async (P, Q, H, B) -> R,
 ) -> Unit {
   self.add(path, Post, handler)
 }
@@ -107,7 +106,7 @@ pub fn[
 ] Router::put(
   self : Router,
   path : String,
-  handler : (P, Q, H, B) -> R,
+  handler : async (P, Q, H, B) -> R,
 ) -> Unit {
   self.add(path, Put, handler)
 }
@@ -122,7 +121,7 @@ pub fn[
 ] Router::patch(
   self : Router,
   path : String,
-  handler : (P, Q, H, B) -> R,
+  handler : async (P, Q, H, B) -> R,
 ) -> Unit {
   self.add(path, Patch, handler)
 }
@@ -137,7 +136,7 @@ pub fn[
 ] Router::delete(
   self : Router,
   path : String,
-  handler : (P, Q, H, B) -> R,
+  handler : async (P, Q, H, B) -> R,
 ) -> Unit {
   self.add(path, Delete, handler)
 }
@@ -146,7 +145,7 @@ pub fn[
 pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(
   self : Router,
   path : String,
-  handler : (P, Q, H) -> R,
+  handler : async (P, Q, H) -> R,
 ) -> Unit {
   self.add(path, Head, (params, query, headers, _body : Unit) => {
     handler(params, query, headers)
@@ -157,7 +156,7 @@ pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::he
 pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(
   self : Router,
   path : String,
-  handler : (P, Q, H) -> R,
+  handler : async (P, Q, H) -> R,
 ) -> Unit {
   self.add(path, Options, (params, query, headers, _body : Unit) => {
     handler(params, query, headers)
