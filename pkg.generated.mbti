@@ -2,6 +2,7 @@
 package "moonbit-community/tyroute"
 
 import {
+  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
   "moonbitlang/core/json",
@@ -74,6 +75,7 @@ pub(open) trait FromBody {
   async fn from_body(@moonback.RequestBody) -> Self
 }
 pub impl FromBody for Unit
+pub impl[T : FromBody] FromBody for @async.Lazy[T]
 pub impl FromBody for @json.Json
 
 pub(open) trait FromHeaders {

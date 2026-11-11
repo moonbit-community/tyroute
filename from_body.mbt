@@ -12,6 +12,17 @@ impl FromBody with fn schema() {
 }
 
 ///|
+/// Defer body extraction until the handler requests the typed value.
+pub impl[T : FromBody] FromBody for @async.Lazy[T] with fn from_body(body) {
+  @async.Lazy(() => T::from_body(body))
+}
+
+///|
+pub impl[T : FromBody] FromBody for @async.Lazy[T] with fn schema() {
+  T::schema()
+}
+
+///|
 pub impl FromBody for Unit with fn from_body(_) {
   ()
 }
