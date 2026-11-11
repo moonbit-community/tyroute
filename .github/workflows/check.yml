@@ -1,0 +1,52 @@
+name: check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: MoonBit version
+        run: moon version --all
+
+      - name: Update dependencies
+        run: moon update
+
+      - name: Check formatting
+        run: moon fmt --check . example/serve.mbtx
+
+      - name: Check, test, and build supported backends
+        run: |
+          for target in wasm native; do
+            moon check --target "$target"
+            moon test --target "$target"
+            moon build example --target "$target"
+          done
+
+      - name: Check standalone example
+        run: moon check example/serve.mbtx
+
+      - name: Check generated interfaces
+        run: |
+          moon info
+          git diff --exit-code

@@ -1,6 +1,7 @@
 ///|
 struct Router {
   routes : Array[Route]
+  openapi_routes : Array[OpenApiRoute]
 }
 
 ///|
@@ -17,7 +18,7 @@ priv struct Route {
 
 ///|
 pub fn Router::Router() -> Router {
-  { routes: [], }
+  { routes: [], openapi_routes: [], }
 }
 
 ///|
@@ -167,6 +168,15 @@ pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::op
 pub impl @moonback.Extension for Router with fn initialize(self, ctx) {
   for route in self.routes {
     ctx.add_route(route.meth, route.path, route.handler)
+  }
+  for route in self.openapi_routes {
+    let components = route.components
+    let document = self.generate_openapi(
+      title=route.title,
+      version=route.version,
+      components?,
+    )
+    ctx.get(route.url, (_request, response) => response.send_json(document))
   }
 }
 

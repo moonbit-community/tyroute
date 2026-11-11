@@ -64,15 +64,10 @@ fn create_user(
 ///|
 async fn serve() -> Unit {
   let router = @tyroute.Router()
+    ..openapi("/openapi.json", title="Users API", version="1.0.0")
     ..get("/users/:id", get_user)
     ..post("/users", create_user)
-  let document = router.openapi(title="Users API", version="1.0.0")
-  let app = @moonback.App(ctx => {
-    ctx.use_(router)
-    ctx.get("/openapi.json", (_request, response) => {
-      response.send_json(document)
-    })
-  })
+  let app = @moonback.App(ctx => ctx.use_(router))
   defer app.close()
   let server = @moonback.listen(host="127.0.0.1", port=3000)
   println("Listening on http://127.0.0.1:3000")
@@ -125,10 +120,20 @@ Custom types can implement `FromParam`, `FromQuery`, `FromHeaders`,
 
 ## OpenAPI
 
-`router.openapi(title="My API", version="1.0.0")` returns an OpenAPI 3.2
-JSON document without calling the handlers. It preserves whole-query schemas,
-including combinations such as `anyOf`, through an `in: querystring` parameter.
-Pass `components=...` when custom schemas reference local components.
+`router.generate_openapi(title="My API", version="1.0.0")` returns an
+OpenAPI 3.2 JSON document without calling the handlers. It preserves whole-query
+schemas, including combinations such as `anyOf`, through an `in: querystring`
+parameter.
+
+`router.openapi("/openapi.json", title="My API", version="1.0.0")` configures
+an OpenAPI endpoint. When `ctx.use_(router)` initializes the router, it generates
+the document once and registers a GET route serving it with status `200` and
+content type `application/json`. The document includes all API routes added
+before initialization, including routes added after `.openapi(...)`.
+Schema generation errors are reported during initialization.
+
+Both methods accept `components=...` when custom schemas reference local
+components.
 
 `FromJson` and `ToJson` do not provide field schemas, so `ViaJson[T]` uses the
 unconstrained default. The current export uses `default` responses and `*/*`

@@ -1,0 +1,51 @@
+---
+import {
+  "moonbit-community/tyroute",
+  "moonbitlang/moonback",
+  "moonbitlang/async",
+  "moonbitlang/core/json",
+}
+---
+
+using @tyroute { type ViaJson }
+
+#derive(ToJson)
+struct User {
+  id : Int
+  name : String
+}
+
+fn get_user(
+  param : Int, query : Unit, headers : Unit
+) -> ViaJson[User] {
+  let name = "..."
+  { id: param, name }
+}
+
+#derive(FromJson)
+struct SearchQuery {
+  kw : String
+  page : Int
+}
+
+fn search_user(
+  param : Unit, query : ViaJson[SearchQuery], _ : Unit,
+) -> ViaJson[Array[User]] {
+  println("\{query.kw}, \{query.page}")
+  [
+    { id: 1, name: "alice" },
+    { id: 2, name: "foo" },
+  ]
+}
+
+async fn main {
+  let router = @tyroute.Router()
+    ..get("/users/:id", get_user)
+    ..get("/users", search_user)
+    ..openapi("/openapi.json", title="API", version="1.0.0")
+
+  println("http://127.0.0.1:3000")
+  let app = @moonback.App(ctx => ctx.use_(router))
+  defer app.close()
+  app.serve(@moonback.listen(host="127.0.0.1", port=3000))
+}

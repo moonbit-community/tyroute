@@ -6,13 +6,21 @@ pub suberror OpenApiError {
 }
 
 ///|
+priv struct OpenApiRoute {
+  url : String
+  title : String
+  version : String
+  components : @json.Json?
+}
+
+///|
 /// Export the registered routes as an OpenAPI 3.2 document without invoking
 /// handlers. Schemas may be objects or booleans; {} remains unconstrained.
 /// Query constraints are preserved through an in: querystring parameter.
-/// Aggregate path/header constraints are retained in specification extensions.
+/// Aggregate header constraints are retained in a specification extension.
 /// Status codes and media types are unknown to schema(), so responses use
 /// default and content uses */*. Pass components when schemas use local $refs.
-pub fn Router::openapi(
+pub fn Router::generate_openapi(
   self : Router,
   title~ : String,
   version~ : String,
@@ -143,9 +151,6 @@ pub fn Router::openapi(
     if !parameters.is_empty() {
       operation["parameters"] = @json.Json::array(parameters)
     }
-    if !(route.params_schema is False) {
-      operation["x-path-schema"] = route.params_schema
-    }
     if !(route.headers_schema is False) {
       operation["x-headers-schema"] = route.headers_schema
     }
@@ -203,4 +208,17 @@ pub fn Router::openapi(
     document["components"] = components
   }
   @json.Json::object(document)
+}
+
+///|
+/// Configure an OpenAPI endpoint. MoonBack initialization generates the
+/// document and registers a GET route serving it as application/json.
+pub fn Router::openapi(
+  self : Router,
+  url : String,
+  title~ : String,
+  version~ : String,
+  components? : @json.Json,
+) -> Unit {
+  self.openapi_routes.push({ url, title, version, components, })
 }

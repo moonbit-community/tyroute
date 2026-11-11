@@ -34,17 +34,11 @@ fn create_user(
 ///|
 async fn main {
   let router = @tyroute.Router()
+    ..openapi("/openapi.json", title="Users API", version="1.0.0")
     ..get("/users/:id", get_user)
     ..post("/users", create_user)
-  let document = router.openapi(title="Users API", version="1.0.0")
-  let app = @moonback.App(ctx => {
-    ctx.use_(router)
-    ctx.get("/openapi.json", (_request, response) => {
-      response.send_json(document)
-    })
-  })
+  let app = @moonback.App(ctx => ctx.use_(router))
   defer app.close()
-  let server = @moonback.listen(host="127.0.0.1", port=3000)
   println("Listening on http://127.0.0.1:3000")
-  app.serve(server)
+  app.serve(@moonback.listen(host="127.0.0.1", port=3000))
 }
