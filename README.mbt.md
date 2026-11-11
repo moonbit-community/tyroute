@@ -43,16 +43,18 @@ struct UserQuery {
 
 ///|
 async fn get_user(
+  ctx : String,
   id : Int32,
   query : @tyroute.ViaJson[UserQuery],
   _headers : Unit,
 ) -> @tyroute.ViaJson[User] {
-  let name = query.0.name.unwrap_or("MoonBit")
+  let name = query.0.name.unwrap_or(ctx)
   @tyroute.ViaJson({ id, name, })
 }
 
 ///|
 async fn create_user(
+  _ctx : Unit,
   _params : Unit,
   _query : Unit,
   _headers : Unit,
@@ -65,8 +67,8 @@ async fn create_user(
 async fn serve() -> Unit {
   let router = @tyroute.Router()
     ..openapi("/openapi.json", title="Users API", version="1.0.0")
-    ..get("/users/:id", get_user)
-    ..post("/users", create_user)
+    ..get("/users/:id", get_user, "MoonBit")
+    ..post("/users", create_user, ())
   let app = @moonback.App(ctx => ctx.use_(router))
   defer app.close()
   let server = @moonback.listen(host="127.0.0.1", port=3000)
@@ -105,9 +107,10 @@ the JSON body into `User` and returns it with status `201`.
 
 ## Handler arguments and responses
 
-GET, HEAD, and OPTIONS handlers take path parameters, query parameters, and
-headers, in that order. POST, PUT, PATCH, and DELETE handlers also take a
-fourth argument for the body. Use `Unit` for an input the handler does not need.
+All registration methods take `path, handler, ctx`; `add` takes
+`path, method, handler, ctx`. Handlers receive the context first, followed by
+path parameters, query parameters, and headers. POST, PUT, PATCH, and DELETE
+handlers also receive a body. Use `Unit` for an unused input or context.
 
 Path captures use MoonBack's `:name` syntax. A tuple such as `(String, Int)`
 extracts two captures in path order. Query and header maps use `FromString`

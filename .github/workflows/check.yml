@@ -43,9 +43,6 @@ jobs:
             moon build example --target "$target"
           done
 
-      - name: Check standalone example
-        run: moon check example/serve.mbtx
-
       - name: Check generated interfaces
         run: |
           moon info

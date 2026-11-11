@@ -41,17 +41,17 @@ pub impl ToResponse for Response
 
 type Router
 pub fn Router::Router() -> Self
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, async (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, async (P, Q, H, B) -> R) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, async (C, P, Q, H, B) -> R, C) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
 pub fn Router::generate_openapi(Self, title~ : String, version~ : String, components? : @json.Json) -> @json.Json raise OpenApiError
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(Self, String, async (P, Q, H) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(Self, String, async (P, Q, H) -> R) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(Self, String, async (C, P, Q, H) -> R, C) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(Self, String, async (C, P, Q, H) -> R, C) -> Unit
 pub async fn Router::initialize(Self, @moonback.ModuleContext) -> Unit
 pub fn Router::openapi(Self, String, title~ : String, version~ : String, components? : @json.Json) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(Self, String, async (P, Q, H) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, async (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, async (P, Q, H, B) -> R) -> Unit
-pub fn[P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, async (P, Q, H, B) -> R) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(Self, String, async (C, P, Q, H) -> R, C) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
+pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
 pub impl @moonback.Extension for Router
 
 pub(all) struct StatusCode(Int32)

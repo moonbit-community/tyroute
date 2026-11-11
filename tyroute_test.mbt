@@ -1,8 +1,8 @@
 ///|
 fn init {
   let router = @tyroute.Router()
-  router.get("api/v0/modules", module_list)
-  router.post("api/v0/modules/:user/:name", module_create)
+  router.get("api/v0/modules", module_list, ())
+  router.post("api/v0/modules/:user/:name", module_create, ())
 }
 
 ///|
@@ -35,6 +35,7 @@ struct ModuleListHeaders {
 
 ///|
 async fn module_list(
+  _ctx : Unit,
   _params : Unit,
   query : @tyroute.ViaJson[ModuleListQuery],
   headers : @tyroute.ViaJson[ModuleListHeaders],
@@ -44,6 +45,7 @@ async fn module_list(
 
 ///|
 async fn module_create(
+  _ctx : Unit,
   params : (String, String),
   _query : Unit,
   _headers : Unit,

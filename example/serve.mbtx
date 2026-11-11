@@ -16,6 +16,7 @@ struct User {
 }
 
 async fn get_user(
+  _ctx : Unit,
   param : Int, query : Unit, headers : Unit
 ) -> ViaJson[User] {
   let name = "..."
@@ -29,6 +30,7 @@ struct SearchQuery {
 }
 
 async fn search_user(
+  _ctx : Unit,
   param : Unit, query : ViaJson[SearchQuery], _ : Unit,
 ) -> ViaJson[Array[User]] {
   println("\{query.kw}, \{query.page}")
@@ -40,8 +42,8 @@ async fn search_user(
 
 async fn main {
   let router = @tyroute.Router()
-    ..get("/users/:id", get_user)
-    ..get("/users", search_user)
+    ..get("/users/:id", get_user, ())
+    ..get("/users", search_user, ())
     ..openapi("/openapi.json", title="API", version="1.0.0")
 
   println("http://127.0.0.1:3000")
