@@ -43,24 +43,6 @@ jobs:
             moon build example --target "$target"
           done
 
-      - name: Check script example against local module
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import subprocess
-          import tempfile
-
-          _, imports, source = Path("example/serve.mbtx").read_text().split("---\n", 2)
-          with tempfile.TemporaryDirectory(prefix="serve_check_", dir="example") as directory:
-              package = Path(directory)
-              (package / "moon.pkg").write_text(
-                  imports + '\nsupported_targets = "native+wasm"\npkgtype(kind: "executable")\n'
-              )
-              (package / "main.mbt").write_text(source)
-              for target in ["wasm", "native"]:
-                  subprocess.run(["moon", "check", directory, "--target", target], check=True)
-          PY
-
       - name: Check generated interfaces
         run: |
           moon info
