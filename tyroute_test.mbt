@@ -34,7 +34,7 @@ struct ModuleListHeaders {
 }
 
 ///|
-fn module_list(
+async fn module_list(
   _params : Unit,
   query : @tyroute.ViaJson[ModuleListQuery],
   headers : @tyroute.ViaJson[ModuleListHeaders],
@@ -43,7 +43,7 @@ fn module_list(
 }
 
 ///|
-fn module_create(
+async fn module_create(
   params : (String, String),
   _query : Unit,
   _headers : Unit,
