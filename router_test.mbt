@@ -165,6 +165,56 @@ async test "async handlers extract inputs and encode responses across suspension
 }
 
 ///|
+async test "lazy body extraction starts in the handler and caches the typed value" {
+  @async.with_timeout(5000, () => {
+    @async.with_task_group(group => {
+      async fn handle(
+        _ctx : Unit,
+        mode : String,
+        _query : Unit,
+        _headers : Unit,
+        body : @async.Lazy[Json],
+      ) -> @tyroute.Response {
+        if mode == "reject" {
+          return @tyroute.Response(status=401)
+        }
+        let value = body.wait()
+        assert_eq(body.wait(), value)
+        @tyroute.Response(status=200, body=value)
+      }
+      let router = @tyroute.Router()..post("/lazy/:mode", handle, ())
+      let app = @moonback.App(ctx => ctx.use_(router))
+      defer app.close()
+      let server = @moonback.listen(host="127.0.0.1", port=0)
+      group.spawn_bg(no_wait=true, () => app.serve(server))
+      let base = "http://127.0.0.1:\{server.addr.port()}"
+      let (response, _) = @http.request(
+        "\{base}/lazy/reject",
+        Post,
+        {},
+        "invalid json",
+      )
+      assert_eq(response.code, 401)
+      let (response, body) = @http.request(
+        "\{base}/lazy/accept",
+        Post,
+        {},
+        "{\"value\":7}",
+      )
+      assert_eq(response.code, 200)
+      assert_eq(body.json(), { "value": 7 })
+      let (response, _) = @http.request(
+        "\{base}/lazy/accept",
+        Post,
+        {},
+        "invalid json",
+      )
+      assert_eq(response.code, 400)
+    })
+  })
+}
+
+///|
 priv suberror AsyncHandlerFailure {
   Unavailable
 }
