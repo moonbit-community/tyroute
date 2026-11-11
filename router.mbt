@@ -53,8 +53,7 @@ pub fn[
         let body : B = FromBody::from_body(req.body)
         ToResponse::to_response(handler(params, query, headers, body))
       } catch {
-        ResponseMismatch(_) =>
-          Response(status=500, headers=@moonback.Headers::default())
+        ResponseMismatch(_) => Response(status=500)
         HandlerError::_ as e =>
           Response(
             status=400,

@@ -35,7 +35,7 @@ pub(all) struct Headers[T](T)
 type Request[Param, Query, Headers, Body]
 
 type Response
-pub fn[A : @moonback.ToHeaders] Response::Response(status~ : Int32, headers~ : A, body? : &@io.Data) -> Self
+pub fn Response::Response(status~ : Int32, headers? : &@moonback.ToHeaders, body? : &@io.Data) -> Self
 pub fn Response::to_response(Self) -> Self raise HandlerError
 pub impl ToResponse for Response
 

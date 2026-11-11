@@ -78,6 +78,57 @@ priv suberror AsyncHandlerFailure {
 }
 
 ///|
+async test "response headers can be omitted with or without a body" {
+  @async.with_timeout(5000, () => {
+    @async.with_task_group(group => {
+      async fn response(
+        mode : String,
+        _query : Unit,
+        _headers : Unit,
+      ) -> @tyroute.Response {
+        @async.sleep(1)
+        match mode {
+          "empty" => @tyroute.Response(status=204)
+          "body" => @tyroute.Response(status=202, body="accepted")
+          _ =>
+            @tyroute.Response(
+              status=201,
+              headers={ "X-Response": "created" },
+              body="created",
+            )
+        }
+      }
+      let router = @tyroute.Router()..get("/response/:mode", response)
+      let app = @moonback.App(ctx => ctx.use_(router))
+      defer app.close()
+      let server = @moonback.listen(host="127.0.0.1", port=0)
+      group.spawn_bg(no_wait=true, () => app.serve(server))
+      let base = "http://127.0.0.1:\{server.addr.port()}"
+      let (response, body) = @http.request(
+        "\{base}/response/empty",
+        Get,
+        {},
+        "",
+      )
+      assert_eq(response.code, 204)
+      assert_eq(body.text(), "")
+      let (response, body) = @http.request("\{base}/response/body", Get, {}, "")
+      assert_eq(response.code, 202)
+      assert_eq(body.text(), "accepted")
+      let (response, body) = @http.request(
+        "\{base}/response/headers",
+        Get,
+        {},
+        "",
+      )
+      assert_eq(response.code, 201)
+      assert_eq(response.headers.get("X-Response"), Some("created"))
+      assert_eq(body.text(), "created")
+    })
+  })
+}
+
+///|
 async test "async handler errors retain extraction handling and middleware propagation" {
   @async.with_timeout(5000, () => {
     @async.with_task_group(group => {
