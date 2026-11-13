@@ -1,156 +1,27 @@
 # tyroute
 
-Typed request extraction, responses, and OpenAPI 3.2 export for
-[MoonBack](https://github.com/moonbitlang/moonback).
+Typed requests, responses, and OpenAPI export for MoonBack.
 
-The module is `moonbit-community/tyroute`; its root package is `@tyroute`.
-It uses MoonBack 0.8.9 and moonbitlang/async 0.22.5. The default target is
-`wasm`; the HTTP example supports both `wasm` and `native`.
+Handlers accept `(Ctx, CustomRequest)` and return `CustomResponse`. Implement
+`FromRequest` to extract and validate a complete request, and `ToResponse` to
+choose the HTTP status, headers, and body.
 
-## Use with MoonBack
-
-In your application's `moon.pkg`, import:
-
-```moonbit nocheck
-import {
-  "moonbit-community/tyroute",
-  "moonbitlang/moonback",
-  "moonbitlang/async",
-  "moonbitlang/core/json",
-}
-
-options("is-main": true)
-```
-
-The corresponding modules must also be dependencies in your `moon.mod`.
-Set `options(preferred_target: "wasm")` there.
-
-Put the following code in the application's `main.mbt`:
-
-```mbt check
-///|
-#derive(FromJson, ToJson)
-struct User {
-  id : Int32
-  name : String
-}
-
-///|
-#derive(FromJson)
-struct UserQuery {
-  name : String?
-}
-
-///|
-async fn get_user(
-  ctx : String,
-  id : Int32,
-  query : @tyroute.ViaJson[UserQuery],
-  _headers : Unit,
-) -> @tyroute.ViaJson[User] {
-  let name = query.0.name.unwrap_or(ctx)
-  @tyroute.ViaJson({ id, name, })
-}
-
-///|
-async fn create_user(
-  _ctx : Unit,
-  _params : Unit,
-  _query : Unit,
-  _headers : Unit,
-  body : @tyroute.ViaJson[User],
-) -> (@tyroute.StatusCode, @tyroute.ViaJson[User]) {
-  (@tyroute.StatusCode(201), body)
-}
-
-///|
-async fn serve() -> Unit {
-  let router = @tyroute.Router()
-    ..openapi("/openapi.json", title="Users API", version="1.0.0")
-    ..get("/users/:id", get_user, "MoonBit")
-    ..post("/users", create_user, ())
-  let app = @moonback.App(ctx => ctx.use_(router))
-  defer app.close()
-  let server = @moonback.listen(host="127.0.0.1", port=3000)
-  println("Listening on http://127.0.0.1:3000")
-  app.serve(server)
-}
-```
-
-The handlers and `serve` function above are compiled as part of this README.
-The `main` entry point belongs to the application package.
-
-`Router` implements MoonBack's `Extension` trait. `ctx.use_(router)` registers
-its routes in the app, where they can coexist with MoonBack routes.
-
-Run the bundled example from the tyroute module directory:
-
-```sh
-moon run example
-```
-
-Its source is in [`example/main.mbt`](example/main.mbt). For a separate
-application, run `moon run .` in its directory.
-
-Then try:
-
-```sh
-curl 'http://127.0.0.1:3000/users/42?name=MoonBit'
-curl -i -X POST http://127.0.0.1:3000/users \
-  -H 'Content-Type: application/json' \
-  -d '{"id":42,"name":"MoonBit"}'
-curl http://127.0.0.1:3000/openapi.json
-```
-
-The GET returns `200` with `{"id":42,"name":"MoonBit"}`. The POST decodes
-the JSON body into `User` and returns it with status `201`.
-
-## Handler arguments and responses
-
-All registration methods take `path, handler, ctx`; `add` takes
-`path, method, handler, ctx`. Handlers receive the context first, followed by
-path parameters, query parameters, and headers. POST, PUT, PATCH, and DELETE
-handlers also receive a body. Use `Unit` for an unused input or context.
-
-Path captures use MoonBack's `:name` syntax. A tuple such as `(String, Int)`
-extracts two captures in path order. Query and header maps use `FromString`
-to parse their values. `ViaJson[T]` decodes JSON bodies through `FromJson` and
-encodes JSON responses through `ToJson`.
-
-Custom types can implement `FromParam`, `FromQuery`, `FromHeaders`,
-`FromBody`, and `ToResponse`. Each trait has a default unconstrained
-`schema()` that custom types can override.
-
-## OpenAPI
-
-`router.generate_openapi(title="My API", version="1.0.0")` returns an
-OpenAPI 3.2 JSON document without calling the handlers. It preserves whole-query
-schemas, including combinations such as `anyOf`, through an `in: querystring`
-parameter.
-
-`router.openapi("/openapi.json", title="My API", version="1.0.0")` configures
-an OpenAPI endpoint. When `ctx.use_(router)` initializes the router, it generates
-the document once and registers a GET route serving it with status `200` and
-content type `application/json`. The document includes all API routes added
-before initialization, including routes added after `.openapi(...)`.
-Schema generation errors are reported during initialization.
-
-Both methods accept `components=...` when custom schemas reference local
-components.
-
-`FromJson` and `ToJson` do not provide field schemas, so `ViaJson[T]` uses the
-unconstrained default. The current export uses `default` responses and `*/*`
-media types because the schema interface does not declare status codes or
-media types.
+See [the handler API](docs/handlers.md) and the runnable
+[example](example/main.mbt).
 
 ## Development
 
-Run these commands from this directory. `README.md` links to this file, and
-the MoonBit example is checked with the package.
-
 ```sh
-moon check
-moon test
-moon fmt
+moon update
+moon fmt --check . example/serve.mbtx
+moon check --target wasm
+moon test --target wasm
+moon build example --target wasm
+moon check --target native
+moon test --target native
+moon build example --target native
 moon info
 ```
+
+Run the example with `moon run example --target native`, then visit
+`http://127.0.0.1:3000/users/42?name=Alice` or `/openapi.json`.

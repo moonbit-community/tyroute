@@ -2,7 +2,6 @@
 package "moonbit-community/tyroute"
 
 import {
-  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
   "moonbitlang/core/json",
@@ -10,20 +9,9 @@ import {
 }
 
 // Values
+pub fn[Req : ToSchema, Res : ToSchema] inferred() -> RouteSchema[Req, Res]
 
 // Errors
-pub(all) suberror HandlerError {
-  StringMismatch(String)
-  ParamMismatch(String)
-  QueryMismatch(String)
-  HeaderMismatch(String)
-  BodyMismatch(String)
-  ResponseMismatch(String)
-}
-pub fn HandlerError::output(Self, &Logger) -> Unit
-pub fn HandlerError::to_string(Self) -> String
-pub impl Show for HandlerError
-
 pub suberror OpenApiError {
   InvalidPath(String)
   InvalidSchema(String)
@@ -31,125 +19,55 @@ pub suberror OpenApiError {
 }
 
 // Types and methods
-pub(all) struct Headers[T](T)
-
-type Request[Param, Query, Headers, Body]
+type Request
+pub fn Request::body(Self) -> @moonback.RequestBody
+pub fn Request::headers(Self) -> @moonback.Headers
+pub fn Request::params(Self) -> Map[StringView, StringView]
+pub fn Request::query(Self) -> @moonback.QueryParams
 
 type Response
 pub fn Response::Response(status~ : Int32, headers? : &@moonback.ToHeaders, body? : &@io.Data) -> Self
-pub fn Response::to_response(Self) -> Self raise HandlerError
-pub impl ToResponse for Response
+
+type RouteSchema[Req, Res]
 
 type Router
 pub fn Router::Router() -> Self
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::add(Self, String, @http.RequestMethod, async (C, P, Q, H, B) -> R, C) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::delete(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
-pub fn Router::generate_openapi(Self, title~ : String, version~ : String, components? : @json.Json) -> @json.Json raise OpenApiError
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::get(Self, String, async (C, P, Q, H) -> R, C) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::head(Self, String, async (C, P, Q, H) -> R, C) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::add(Self, String, @http.RequestMethod, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::delete(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
+pub fn Router::generate_openapi(Self, title~ : String, version~ : String) -> @json.Json raise OpenApiError
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::get(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::head(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
 pub async fn Router::initialize(Self, @moonback.ModuleContext) -> Unit
-pub fn Router::openapi(Self, String, title~ : String, version~ : String, components? : @json.Json) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, R : ToResponse] Router::options(Self, String, async (C, P, Q, H) -> R, C) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::patch(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::post(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
-pub fn[C, P : FromParam, Q : FromQuery, H : FromHeaders, B : FromBody, R : ToResponse] Router::put(Self, String, async (C, P, Q, H, B) -> R, C) -> Unit
+pub fn Router::openapi(Self, String, title~ : String, version~ : String) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::patch(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::post(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
+pub fn[Ctx, Req : FromRequest, Res : ToResponse] Router::put(Self, String, async (Ctx, Req) -> Res, Ctx, schema? : RouteSchema[Req, Res]) -> Unit
 pub impl @moonback.Extension for Router
 
-pub(all) struct StatusCode(Int32)
-pub impl ToResponse for StatusCode
+type SchemaContext
+pub fn[T : ToSchema] SchemaContext::ref(Self, String, Tag[T]) -> @json.Json
 
-pub(all) struct ViaJson[T](T)
-pub async fn[T : @json.FromJson] ViaJson::from_body(@moonback.RequestBody) -> Self[T]
-pub impl[T : @json.FromJson] FromBody for ViaJson[T]
-pub impl[T : @json.FromJson] FromHeaders for ViaJson[T]
-pub impl[A : @json.FromJson] FromParam for ViaJson[A]
-pub impl[A : @json.FromJson] FromQuery for ViaJson[A]
-pub impl[A : @json.FromJson] FromString for ViaJson[A]
-pub impl[A : @json.ToJson] ToResponse for ViaJson[A]
+pub(all) enum Tag[T] {
+  Tag
+}
 
 // Type aliases
 
 // Traits
-pub(open) trait FromBody {
-  fn schema() -> @json.Json = _
-  async fn from_body(@moonback.RequestBody) -> Self
+pub(open) trait FromRequest {
+  async fn from_request(Request) -> Self
 }
-pub impl FromBody for Unit
-pub impl[T : FromBody] FromBody for @async.Lazy[T]
-pub impl FromBody for @json.Json
-
-pub(open) trait FromHeaders {
-  fn schema() -> @json.Json = _
-  fn from_headers(@moonback.Headers) -> Self raise HandlerError
-}
-pub impl FromHeaders for Unit
-pub impl[T : FromString] FromHeaders for Array[(String, T)]
-pub impl[T : FromString] FromHeaders for Map[String, T]
-pub impl FromHeaders for @moonback.Headers
-
-pub(open) trait FromParam {
-  fn schema() -> @json.Json = _
-  fn from_param(Array[(StringView, StringView)]) -> Self raise HandlerError
-}
-pub impl FromParam for Unit
-pub impl FromParam for Bool
-pub impl FromParam for Char
-pub impl FromParam for Int32
-pub impl FromParam for Int64
-pub impl FromParam for UInt32
-pub impl FromParam for UInt64
-pub impl FromParam for Float
-pub impl FromParam for Double
-pub impl FromParam for String
-pub impl[A : FromString, B : FromString] FromParam for (A, B)
-pub impl[A : FromString, B : FromString, C : FromString] FromParam for (A, B, C)
-pub impl[A : FromString, B : FromString, C : FromString, D : FromString] FromParam for (A, B, C, D)
-pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : FromString] FromParam for (A, B, C, D, E)
-pub impl[A : FromString, B : FromString, C : FromString, D : FromString, E : FromString, F : FromString] FromParam for (A, B, C, D, E, F)
-pub impl FromParam for StringView
-
-pub(open) trait FromQuery {
-  fn schema() -> @json.Json = _
-  fn from_query(@moonback.QueryParams) -> Self raise HandlerError
-}
-pub impl FromQuery for Unit
-pub impl[T : FromString] FromQuery for Array[(String, T)]
-pub impl[T : FromString] FromQuery for Map[String, T]
-
-pub(open) trait FromString {
-  fn schema() -> @json.Json = _
-  fn from_string(StringView) -> Self raise HandlerError
-}
-pub impl FromString for Bool
-pub impl FromString for Char
-pub impl FromString for Int32
-pub impl FromString for Int64
-pub impl FromString for UInt32
-pub impl FromString for UInt64
-pub impl FromString for Float
-pub impl FromString for Double
-pub impl FromString for String
-pub impl FromString for StringView
+pub impl FromRequest for Unit
 
 pub(open) trait ToResponse {
-  fn schema() -> @json.Json = _
-  fn to_response(Self) -> Response raise HandlerError
+  fn to_response(Self) -> Response
 }
 pub impl ToResponse for Unit
-pub impl ToResponse for Bool
-pub impl ToResponse for Byte
-pub impl ToResponse for Char
-pub impl ToResponse for Int32
-pub impl ToResponse for Int16
-pub impl ToResponse for Int64
-pub impl ToResponse for UInt32
-pub impl ToResponse for UInt16
-pub impl ToResponse for UInt64
-pub impl ToResponse for Float
-pub impl ToResponse for Double
 pub impl ToResponse for String
-pub impl ToResponse for Bytes
 pub impl ToResponse for @json.Json
-pub impl[A : ToResponse] ToResponse for (StatusCode, A)
-pub impl ToResponse for BytesView
 pub impl ToResponse for StringView
+
+pub(open) trait ToSchema {
+  fn to_schema(SchemaContext) -> @json.Json
+}
+pub impl ToSchema for Unit

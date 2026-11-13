@@ -1,8 +1,8 @@
 import {
   "moonbit-community/tyroute",
   "moonbitlang/moonback",
+  "moonbitlang/core/string",
   "moonbitlang/async",
-  "moonbitlang/core/json",
 }
 
 supported_targets = "native+wasm"

@@ -3,51 +3,123 @@ import {
   "moonbit-community/tyroute",
   "moonbitlang/moonback",
   "moonbitlang/async",
-  "moonbitlang/core/json",
+  "moonbitlang/core/string",
 }
 ---
 
-using @tyroute { type ViaJson }
-
+///|
 #derive(ToJson)
-struct User {
-  id : Int
+priv struct User {
+  id : Int32
   name : String
 }
 
-async fn get_user(
-  _ctx : Unit,
-  param : Int, query : Unit, headers : Unit
-) -> ViaJson[User] {
-  let name = "..."
-  { id: param, name }
+///|
+impl @tyroute.ToSchema for User with fn to_schema(_ctx) {
+  {
+    "type": "object",
+    "properties": {
+      "id": { "type": "integer", "format": "int32" },
+      "name": { "type": "string" },
+    },
+    "required": ["id", "name"],
+  }
 }
 
-#derive(FromJson)
-struct SearchQuery {
-  kw : String
-  page : Int
+///|
+priv enum GetUserRequest {
+  Valid(Int32, String?)
+  Invalid
 }
 
-async fn search_user(
-  _ctx : Unit,
-  param : Unit, query : ViaJson[SearchQuery], _ : Unit,
-) -> ViaJson[Array[User]] {
-  println("\{query.kw}, \{query.page}")
-  [
-    { id: 1, name: "alice" },
-    { id: 2, name: "foo" },
-  ]
+///|
+impl @tyroute.FromRequest for GetUserRequest with fn from_request(request) {
+  guard request.params().get("id") is Some(value) else { return Invalid }
+  let id = @string.parse_int(value) catch {
+    Failure(_) => return Invalid
+    error => raise error
+  }
+  Valid(id, request.query().get("name"))
 }
 
+///|
+impl @tyroute.ToSchema for GetUserRequest with fn to_schema(_ctx) {
+  {
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "format": "int32" },
+      },
+      { "name": "name", "in": "query", "schema": { "type": "string" } },
+    ],
+  }
+}
+
+///|
+priv enum GetUserResponse {
+  Ok(User)
+  Invalid(String)
+}
+
+///|
+impl @tyroute.ToResponse for GetUserResponse with fn to_response(self) {
+  match self {
+    Ok(user) =>
+      Response(
+        status=200,
+        headers={ "Content-Type": "application/json" },
+        body=Json(user),
+      )
+    Invalid(detail) =>
+      Response(
+        status=400,
+        headers={ "Content-Type": "text/plain; charset=utf-8" },
+        body=detail,
+      )
+  }
+}
+
+///|
+impl @tyroute.ToSchema for GetUserResponse with fn to_schema(ctx) {
+  {
+    "200": {
+      "description": "User",
+      "content": {
+        "application/json": {
+          "schema": ctx.ref(
+            "#/components/schemas/User",
+            (@tyroute.Tag : @tyroute.Tag[User]),
+          ),
+        },
+      },
+    },
+    "400": {
+      "description": "Invalid id",
+      "content": {
+        "text/plain; charset=utf-8": { "schema": { "type": "string" } },
+      },
+    },
+  }
+}
+
+///|
+#warnings("-unused_async")
+async fn get_user(ctx : String, request : GetUserRequest) -> GetUserResponse {
+  match request {
+    Valid(id, name) => Ok({ id, name: name.unwrap_or(ctx), })
+    Invalid => Invalid("Invalid id")
+  }
+}
+
+///|
 async fn main {
   let router = @tyroute.Router()
-    ..get("/users/:id", get_user, ())
-    ..get("/users", search_user, ())
-    ..openapi("/openapi.json", title="API", version="1.0.0")
-
-  println("http://127.0.0.1:3000")
+    ..get("/users/:id", get_user, "MoonBit", schema=@tyroute.inferred())
+    ..openapi("/openapi.json", title="Users API", version="1.0.0")
   let app = @moonback.App(ctx => ctx.use_(router))
   defer app.close()
+  println("Listening on http://127.0.0.1:3000")
   app.serve(@moonback.listen(host="127.0.0.1", port=3000))
 }

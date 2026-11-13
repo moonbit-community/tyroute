@@ -10,37 +10,20 @@ priv struct OpenApiRoute {
   url : String
   title : String
   version : String
-  components : @json.Json?
 }
 
 ///|
-/// Export the registered routes as an OpenAPI 3.2 document without invoking
-/// handlers. Schemas may be objects or booleans; {} remains unconstrained.
-/// Query constraints are preserved through an in: querystring parameter.
-/// Aggregate header constraints are retained in a specification extension.
-/// Status codes and media types are unknown to schema(), so responses use
-/// default and content uses */*. Pass components when schemas use local $refs.
+/// Export routes and their optional contracts without invoking converters or
+/// handlers. Routes without a contract use an undocumented default response.
 pub fn Router::generate_openapi(
   self : Router,
   title~ : String,
   version~ : String,
-  components? : @json.Json,
 ) -> @json.Json raise OpenApiError {
+  let ctx = SchemaContext::new(None)
   let paths : Map[String, @json.Json] = Map([])
   let templates : Map[String, (String, Array[String])] = Map([])
   for route in self.routes {
-    for
-      schema in [
-        route.params_schema,
-        route.query_schema,
-        route.headers_schema,
-        route.body_schema,
-        route.response_schema,
-      ] {
-      guard schema is (Object(_) | True | False) else {
-        raise InvalidSchema(route.path)
-      }
-    }
     let segments : Array[String] = []
     let shape : Array[String] = []
     let names : Array[String] = []
@@ -77,7 +60,7 @@ pub fn Router::generate_openapi(
     }
     let shape = "/" + shape.join("/")
     // OpenAPI forbids separate paths that differ only in capture names.
-    // Reuse the first spelling while keeping each operation's input schema.
+    // Reuse the first spelling for all operations on the same path shape.
     let (path, parameter_names) = if templates.get(shape) is Some(template) {
       template
     } else {
@@ -85,81 +68,9 @@ pub fn Router::generate_openapi(
       templates[shape] = (path, names)
       (path, names)
     }
-    let parameters : Array[@json.Json] = []
-    for index, name in names {
-      let schema = if route.params_schema is Object(fields) &&
-        fields.get("properties") is Some(Object(properties)) {
-        properties.get(name).unwrap_or(@json.Json::empty_object())
-      } else if route.params_schema is Object(fields) &&
-        fields.get("prefixItems") is Some(Array(items)) {
-        items.get(index).unwrap_or(@json.Json::empty_object())
-      } else if names.length() == 1 && !(route.params_schema is False) {
-        route.params_schema
-      } else {
-        @json.Json::empty_object()
-      }
-      let parameter : Map[String, @json.Json] = {
-        "name": @json.Json::string(parameter_names[index]),
-        "in": "path",
-        "required": true,
-        "schema": schema,
-      }
-      if catch_all[index] {
-        // Standard path templates cannot describe captures containing raw '/'.
-        parameter["x-moonback-catch-all"] = true
-      }
-      parameters.push(@json.Json::object(parameter))
-    }
-    if !(route.query_schema is False) {
-      parameters.push({
-        "name": "query",
-        "in": "querystring",
-        "content": {
-          "application/x-www-form-urlencoded": { "schema": route.query_schema },
-        },
-      })
-    }
-    if route.headers_schema is Object(fields) &&
-      fields.get("properties") is Some(Object(properties)) {
-      let required = if fields.get("required") is Some(Array(names)) {
-        names
-      } else {
-        []
-      }
-      let seen : Map[String, Unit] = Map([])
-      for name, schema in properties {
-        let normalized = name.to_lower()
-        guard !seen.contains(normalized) else {
-          raise InvalidSchema("Duplicate header: \{name}")
-        }
-        seen[normalized] = ()
-        parameters.push({
-          "name": name,
-          "in": "header",
-          "required": required.contains(@json.Json::string(name)),
-          "schema": schema,
-        })
-      }
-    }
-    let response : Map[String, @json.Json] = { "description": "Response" }
-    if route.meth != Head && !(route.response_schema is False) {
-      response["content"] = { "*/*": { "schema": route.response_schema } }
-    }
-    let operation : Map[String, @json.Json] = {
-      "responses": { "default": @json.Json::object(response) },
-    }
-    if !parameters.is_empty() {
-      operation["parameters"] = @json.Json::array(parameters)
-    }
-    if !(route.headers_schema is False) {
-      operation["x-headers-schema"] = route.headers_schema
-    }
-    if !(route.body_schema is False) {
-      operation["requestBody"] = {
-        "required": true,
-        "content": { "*/*": { "schema": route.body_schema } },
-      }
-    }
+    let operation = route.openapi_operation(
+      ctx, names, parameter_names, catch_all,
+    )
     let item = if paths.get(path) is Some(Object(item)) {
       item
     } else {
@@ -201,10 +112,7 @@ pub fn Router::generate_openapi(
     "info": { "title": title, "version": version },
     "paths": @json.Json::object(paths),
   }
-  if components is Some(components) {
-    guard components is Object(_) else {
-      raise InvalidSchema("components must be an object")
-    }
+  if ctx.finish() is Some(components) {
     document["components"] = components
   }
   @json.Json::object(document)
@@ -218,7 +126,139 @@ pub fn Router::openapi(
   url : String,
   title~ : String,
   version~ : String,
-  components? : @json.Json,
 ) -> Unit {
-  self.openapi_routes.push({ url, title, version, components, })
+  self.openapi_routes.push({ url, title, version, })
+}
+
+///|
+fn Route::openapi_operation(
+  self : Route,
+  ctx : SchemaContext,
+  names : Array[String],
+  parameter_names : Array[String],
+  catch_all : Array[Bool],
+) -> Map[String, Json] raise OpenApiError {
+  let (request, responses) = if self.schema is Some(schema) {
+    schema(ctx)
+  } else {
+    ({}, { "default": { "description": "Response (schema not provided)" } })
+  }
+  guard request is Object(fields) && !fields.contains("responses") else {
+    raise InvalidSchema(
+      "Request schema must be an operation object without responses: \{self.path}",
+    )
+  }
+  let operation = fields.copy()
+  let parameters : Array[Json] = []
+  let seen : Map[(String, String), Unit] = Map([])
+  if operation.get("parameters") is Some(value) {
+    guard value is Array(declared) else {
+      raise InvalidSchema("parameters must be an array: \{self.path}")
+    }
+    for parameter in declared {
+      guard ctx.resolve(parameter) is Object(fields) &&
+        fields.get("name") is Some(String(name)) &&
+        fields.get("in") is Some(String(location)) &&
+        !name.is_empty() else {
+        raise InvalidSchema("Expected a parameter object: \{self.path}")
+      }
+      let key = (
+        location,
+        if location == "header" {
+          name.to_lower()
+        } else {
+          name
+        },
+      )
+      guard !seen.contains(key) else {
+        raise InvalidSchema("Duplicate parameter: \{location} \{name}")
+      }
+      seen[key] = ()
+      if location == "path" {
+        guard names.search(name) is Some(index) else {
+          raise InvalidSchema("Unknown path parameter: \{name}")
+        }
+        guard !(fields.get("required") is Some(False)) else {
+          raise InvalidSchema("Path parameter must be required: \{name}")
+        }
+        let fields = fields.copy()
+        fields["name"] = @json.Json::string(parameter_names[index])
+        fields["required"] = true
+        if catch_all[index] {
+          fields["x-moonback-catch-all"] = true
+        }
+        parameters.push(@json.Json::object(fields))
+      } else {
+        parameters.push(parameter)
+      }
+    }
+  }
+  for index, name in names {
+    if seen.contains(("path", name)) {
+      continue
+    }
+    let parameter : Map[String, Json] = {
+      "name": @json.Json::string(parameter_names[index]),
+      "in": "path",
+      "required": true,
+      "schema": {},
+    }
+    if catch_all[index] {
+      parameter["x-moonback-catch-all"] = true
+    }
+    parameters.push(@json.Json::object(parameter))
+  }
+  if !parameters.is_empty() {
+    operation["parameters"] = @json.Json::array(parameters)
+  }
+  if operation.get("requestBody") is Some(body) && !(body is Object(_)) {
+    raise InvalidSchema("requestBody must be an object: \{self.path}")
+  }
+  operation["responses"] = self.openapi_responses(ctx, responses)
+  operation
+}
+
+///|
+fn Route::openapi_responses(
+  self : Route,
+  ctx : SchemaContext,
+  schema : Json,
+) -> Json raise OpenApiError {
+  guard schema is Object(declared) && !declared.is_empty() else {
+    raise InvalidSchema(
+      "Response schema must be a nonempty responses object: \{self.path}",
+    )
+  }
+  let responses : Map[String, Json] = Map([])
+  let mut has_response = false
+  for status, response in declared {
+    if status.has_prefix("x-") {
+      responses[status] = response
+      continue
+    }
+    guard status == "default" ||
+      status is (['1'..<='5', '0'..<='9', '0'..<='9'] | ['1'..<='5', 'X', 'X']) else {
+      raise InvalidSchema("Invalid response status: \{status}")
+    }
+    guard ctx.resolve(response) is Object(fields) &&
+      fields.get("description") is Some(String(_)) else {
+      raise InvalidSchema(
+        "Expected a response object with a description: \{status}",
+      )
+    }
+    has_response = true
+    if self.meth == Head {
+      let fields = fields.copy()
+      fields.remove("content")
+      responses[status] = @json.Json::object(fields)
+    } else {
+      responses[status] = response
+    }
+  }
+  guard has_response else {
+    raise InvalidSchema(
+      "Response schema must declare at least one response: \{self.path}",
+    )
+  }
+  @json.Json::object(responses)
 }
